@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
-import { type CursorInstance, setPixel, setHotspot } from '../store'
+import { type CursorInstance, setPixel, setHotspot, commitPaint, undo, redo } from '../store'
 import { ChevronDown } from 'lucide-preact'
 
 function ColorDropdown({ color, onChange, framePixels }: {
@@ -208,12 +208,12 @@ export function FrameEditor({ cursor }: { cursor: CursorInstance }) {
 
     if (tool === 'eraser') {
       painting.current = 'transparent'
-      setPixel(cursor, idx, x, y, 'transparent')
+      setPixel(cursor, idx, x, y, 'transparent', true)
     } else {
       const paintColor = a === 0 || frame.pixels[off] !== parseInt(color.slice(1, 3), 16)
         ? color : 'transparent'
       painting.current = paintColor
-      setPixel(cursor, idx, x, y, paintColor)
+      setPixel(cursor, idx, x, y, paintColor, true)
     }
   }
 
@@ -221,10 +221,11 @@ export function FrameEditor({ cursor }: { cursor: CursorInstance }) {
     if (painting.current === null) return
     const cell = getCellFromEvent(e)
     if (!cell) return
-    setPixel(cursor, idx, cell[0], cell[1], painting.current)
+    setPixel(cursor, idx, cell[0], cell[1], painting.current, false)
   }
 
   function handleUp() {
+    if (painting.current !== null) commitPaint(cursor)
     painting.current = null
   }
 
@@ -232,6 +233,21 @@ export function FrameEditor({ cursor }: { cursor: CursorInstance }) {
     document.addEventListener('mouseup', handleUp)
     return () => document.removeEventListener('mouseup', handleUp)
   }, [])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault()
+        undo(cursor)
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault()
+        redo(cursor)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [cursor])
 
   return (
     <div class="flex flex-col h-full">

@@ -1,6 +1,9 @@
 import { signal, type Signal } from '@preact/signals'
 import { parseAni, writeAni, createEmptyFrame } from './aniFormat'
 import type { AniFile, CursorFrame } from './aniFormat'
+import { UndoHistory, beginPaintStroke, commitPaintStroke, execSetHotspot, execAddFrame, execDuplicateFrame, execDeleteFrame, execMoveFrame } from './undoHistory'
+
+export { UndoHistory } from './undoHistory'
 
 export interface CursorInstance {
   id: string
@@ -16,6 +19,7 @@ export interface CursorInstance {
   dirty: Signal<boolean>
   paintColor: Signal<string>
   paintVersion: Signal<number>
+  undoHistory: UndoHistory
 }
 
 let nextId = 1
@@ -42,6 +46,7 @@ export function createCursor(
     dirty: signal(false),
     paintColor: signal('#000000'),
     paintVersion: signal(0),
+    undoHistory: new UndoHistory(),
   }
 }
 
@@ -78,14 +83,16 @@ export function saveAniFile(cursor: CursorInstance): Uint8Array {
   return new Uint8Array(buf)
 }
 
-export function setPixel(cursor: CursorInstance, frameIdx: number, x: number, y: number, color: string) {
+export function setPixel(cursor: CursorInstance, frameIdx: number, x: number, y: number, color: string, isStrokeStart: boolean) {
   const frames = cursor.frames.value
   if (frameIdx < 0 || frameIdx >= frames.length) return
   const frame = frames[frameIdx]
   if (x < 0 || x >= frame.width || y < 0 || y >= frame.height) return
 
+  if (isStrokeStart) beginPaintStroke(frameIdx, frame)
+
   const newFrames = [...frames]
-  const f = { ...newFrames[frameIdx], pixels: new Uint8Array(newFrames[frameIdx].pixels) }
+  const f = { ...newFrames[frameIdx], pixels: new Uint8Array(newFrames[frameIdx].pixels), andMask: new Uint8Array(newFrames[frameIdx].andMask) }
   const off = (y * f.width + x) * 4
 
   if (color === 'transparent') {
@@ -112,58 +119,76 @@ export function setPixel(cursor: CursorInstance, frameIdx: number, x: number, y:
   cursor.paintVersion.value++
 }
 
+export function commitPaint(cursor: CursorInstance) {
+  commitPaintStroke(
+    () => cursor.frames.value,
+    (f) => { cursor.frames.value = f },
+    (d) => { cursor.dirty.value = d },
+    cursor.undoHistory,
+  )
+}
+
 export function setHotspot(cursor: CursorInstance, frameIdx: number, hx: number, hy: number) {
-  const frames = cursor.frames.value
-  if (frameIdx < 0 || frameIdx >= frames.length) return
-  const newFrames = [...frames]
-  newFrames[frameIdx] = { ...newFrames[frameIdx], hotspotX: hx, hotspotY: hy }
-  cursor.frames.value = newFrames
-  cursor.dirty.value = true
+  execSetHotspot(
+    () => cursor.frames.value,
+    (f) => { cursor.frames.value = f },
+    (d) => { cursor.dirty.value = d },
+    cursor.undoHistory,
+    frameIdx, hx, hy,
+  )
 }
 
 export function addFrame(cursor: CursorInstance) {
   const frames = cursor.frames.value
   const ref = frames[0] ?? { width: 32, height: 32 }
   const newFrame = createEmptyFrame(ref.width, ref.height)
-  cursor.frames.value = [...frames, newFrame]
-  cursor.dirty.value = true
+  execAddFrame(
+    () => cursor.frames.value,
+    (f) => { cursor.frames.value = f },
+    (d) => { cursor.dirty.value = d },
+    cursor.undoHistory,
+    newFrame,
+  )
 }
 
 export function duplicateFrame(cursor: CursorInstance, idx: number) {
-  const frames = cursor.frames.value
-  if (idx < 0 || idx >= frames.length) return
-  const src = frames[idx]
-  const dup: CursorFrame = {
-    ...src,
-    pixels: new Uint8Array(src.pixels),
-    andMask: new Uint8Array(src.andMask),
-  }
-  const newFrames = [...frames]
-  newFrames.splice(idx + 1, 0, dup)
-  cursor.frames.value = newFrames
-  cursor.dirty.value = true
+  execDuplicateFrame(
+    () => cursor.frames.value,
+    (f) => { cursor.frames.value = f },
+    (d) => { cursor.dirty.value = d },
+    cursor.undoHistory,
+    idx,
+  )
 }
 
 export function deleteFrame(cursor: CursorInstance, idx: number) {
-  const frames = cursor.frames.value
-  if (frames.length <= 1) return
-  const newFrames = frames.filter((_: CursorFrame, i: number) => i !== idx)
-  cursor.frames.value = newFrames
-  if (cursor.selectedFrame.value >= newFrames.length) {
-    cursor.selectedFrame.value = newFrames.length - 1
-  }
-  cursor.dirty.value = true
+  execDeleteFrame(
+    () => cursor.frames.value,
+    (f) => { cursor.frames.value = f },
+    (i) => { cursor.selectedFrame.value = i },
+    (d) => { cursor.dirty.value = d },
+    cursor.undoHistory,
+    idx,
+  )
 }
 
 export function moveFrame(cursor: CursorInstance, fromIdx: number, toIdx: number) {
-  const frames = [...cursor.frames.value]
-  if (fromIdx < 0 || fromIdx >= frames.length) return
-  if (toIdx < 0 || toIdx >= frames.length) return
-  const [moved] = frames.splice(fromIdx, 1)
-  frames.splice(toIdx, 0, moved)
-  cursor.frames.value = frames
-  cursor.selectedFrame.value = toIdx
-  cursor.dirty.value = true
+  execMoveFrame(
+    () => cursor.frames.value,
+    (f) => { cursor.frames.value = f },
+    (i) => { cursor.selectedFrame.value = i },
+    (d) => { cursor.dirty.value = d },
+    cursor.undoHistory,
+    fromIdx, toIdx,
+  )
+}
+
+export function undo(cursor: CursorInstance) {
+  cursor.undoHistory.undo()
+}
+
+export function redo(cursor: CursorInstance) {
+  cursor.undoHistory.redo()
 }
 
 export function setFrameRate(cursor: CursorInstance, frameIdx: number, rate: number) {
