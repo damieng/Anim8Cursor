@@ -5,6 +5,7 @@ import { CursorPane, CursorPaneTitle, CursorStatusBar } from './panes/CursorPane
 import { FrameEditor, EditorTitle } from './panes/FrameEditor'
 import { PreviewPane, PreviewTitle } from './panes/PreviewPane'
 import { SaveBar, SpeedControl } from './components/Toolbar'
+import { ZoomControl } from './components/ZoomControl'
 import { cursors, activeCursorId, removeCursor, storedFocusedId, openPreview, loadAniFile, addCursor } from './store'
 import { Play } from 'lucide-preact'
 import './app.css'
@@ -110,6 +111,9 @@ export function App() {
                   <Play size={14} />
                   Preview
                 </button>
+                <div class="ml-auto">
+                  <ZoomControl value={cursor.gridZoom.value} onChange={(v) => { cursor.gridZoom.value = v }} />
+                </div>
               </div>
               <CursorPane cursor={cursor} />
             </div>

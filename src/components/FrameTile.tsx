@@ -8,6 +8,11 @@ export function FrameTile({
   active,
   index,
   onClick,
+  onContextMenu,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   frame: CursorFrame
   size: number
@@ -15,6 +20,11 @@ export function FrameTile({
   active: boolean
   index: number
   onClick: () => void
+  onContextMenu?: (e: MouseEvent) => void
+  onDragStart?: (e: DragEvent) => void
+  onDragOver?: (e: DragEvent) => void
+  onDrop?: (e: DragEvent) => void
+  onDragEnd?: () => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -71,10 +81,34 @@ export function FrameTile({
       class={`inline-flex flex-col items-center cursor-pointer border-2 rounded p-0.5 transition-colors ${
         active ? 'border-blue-500 bg-blue-50' : selected ? 'border-blue-300 bg-blue-50/50' : 'border-transparent hover:border-gray-300'
       }`}
+      draggable
       onClick={onClick}
+      onContextMenu={onContextMenu}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
     >
       <canvas ref={canvasRef} class="block" />
       <span class="text-xs text-gray-500 mt-0.5 leading-tight">{index}</span>
+    </div>
+  )
+}
+
+export function AddFrameTile({ size, onClick }: { size: number; onClick: () => void }) {
+  const tileSize = size
+  return (
+    <div
+      class="inline-flex flex-col items-center cursor-pointer border-2 border-dashed border-gray-300 rounded p-0.5 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+      onClick={onClick}
+    >
+      <div
+        class="flex items-center justify-center text-gray-400 text-2xl"
+        style={{ width: tileSize, height: tileSize }}
+      >
+        +
+      </div>
+      <span class="text-xs text-gray-400 mt-0.5 leading-tight">Add</span>
     </div>
   )
 }

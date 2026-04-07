@@ -16,11 +16,11 @@ export function SaveBar({ cursor }: { cursor: CursorInstance }) {
 
   return (
     <button
-      class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
+      class="p-1.5 bg-white hover:bg-blue-50 rounded border border-gray-300 flex items-center justify-center"
       onClick={handleSave}
+      title="Save .ani"
     >
-      <Save size={14} />
-      Save .ani
+      <Save size={18} />
     </button>
   )
 }

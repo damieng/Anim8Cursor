@@ -1,62 +1,46 @@
+import { useState } from 'preact/hooks'
 import { type CursorInstance, addFrame, duplicateFrame, deleteFrame, openEditor, moveFrame } from '../store'
 import type { CursorFrame } from '../aniFormat'
-import { FrameTile } from '../components/FrameTile'
-import { ZoomControl } from '../components/ZoomControl'
-import { Plus, Copy, Trash2, ArrowLeft, ArrowRight } from 'lucide-preact'
+import { FrameTile, AddFrameTile } from '../components/FrameTile'
 
 export function CursorPane({ cursor }: { cursor: CursorInstance }) {
   const frames = cursor.frames.value
   const selected = cursor.selectedFrame.value
   const zoom = cursor.gridZoom.value
   const tileSize = Math.max(frames[0]?.width ?? 32, frames[0]?.height ?? 32) * zoom
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [ctxMenu, setCtxMenu] = useState<{ idx: number; x: number; y: number } | null>(null)
+
+  function handleDragStart(i: number, e: DragEvent) {
+    setDragIdx(i)
+    e.dataTransfer!.effectAllowed = 'move'
+  }
+
+  function handleDragOver(_i: number, e: DragEvent) {
+    e.preventDefault()
+    e.dataTransfer!.dropEffect = 'move'
+  }
+
+  function handleDrop(i: number, e: DragEvent) {
+    e.preventDefault()
+    if (dragIdx !== null && dragIdx !== i) {
+      moveFrame(cursor, dragIdx, i)
+    }
+    setDragIdx(null)
+  }
+
+  function handleDragEnd() {
+    setDragIdx(null)
+  }
+
+  function handleContextMenu(i: number, e: MouseEvent) {
+    e.preventDefault()
+    setCtxMenu({ idx: i, x: e.clientX, y: e.clientY })
+  }
 
   return (
     <div class="flex flex-col h-full">
-      <div class="flex items-center gap-2 mb-3 flex-wrap shrink-0">
-        <button
-          class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
-          onClick={() => addFrame(cursor)}
-          title="Add frame"
-        >
-          <Plus size={14} /> Add
-        </button>
-        <button
-          class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"
-          onClick={() => duplicateFrame(cursor, selected)}
-          title="Duplicate frame"
-        >
-          <Copy size={14} /> Duplicate
-        </button>
-        <button
-          class="px-2 py-1 bg-white hover:bg-red-50 rounded border border-gray-300 font-medium flex items-center gap-1 text-red-600"
-          onClick={() => deleteFrame(cursor, selected)}
-          title="Delete frame"
-          disabled={frames.length <= 1}
-        >
-          <Trash2 size={14} />
-        </button>
-        <div class="h-4 w-px bg-gray-300" />
-        <button
-          class="px-1.5 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300"
-          onClick={() => moveFrame(cursor, selected, selected - 1)}
-          disabled={selected <= 0}
-          title="Move frame left"
-        >
-          <ArrowLeft size={14} />
-        </button>
-        <button
-          class="px-1.5 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300"
-          onClick={() => moveFrame(cursor, selected, selected + 1)}
-          disabled={selected >= frames.length - 1}
-          title="Move frame right"
-        >
-          <ArrowRight size={14} />
-        </button>
-        <div class="ml-auto">
-          <ZoomControl value={zoom} onChange={(v) => { cursor.gridZoom.value = v }} />
-        </div>
-      </div>
-      <div class="flex-1 overflow-auto min-h-0">
+      <div class="flex-1 overflow-auto min-h-0 relative">
         <div class="flex flex-wrap gap-2 content-start">
           {frames.map((frame: CursorFrame, i: number) => (
             <FrameTile
@@ -70,9 +54,38 @@ export function CursorPane({ cursor }: { cursor: CursorInstance }) {
                 cursor.selectedFrame.value = i
                 openEditor(cursor)
               }}
+              onContextMenu={(e) => handleContextMenu(i, e)}
+              onDragStart={(e) => handleDragStart(i, e)}
+              onDragOver={(e) => handleDragOver(i, e)}
+              onDrop={(e) => handleDrop(i, e)}
+              onDragEnd={handleDragEnd}
             />
           ))}
+          <AddFrameTile size={tileSize} onClick={() => addFrame(cursor)} />
         </div>
+        {ctxMenu && (
+          <>
+            <div class="fixed inset-0 z-40" onClick={() => setCtxMenu(null)} onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null) }} />
+            <div
+              class="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[140px]"
+              style={{ left: ctxMenu.x, top: ctxMenu.y }}
+            >
+              <button
+                class="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 text-gray-700"
+                onClick={() => { duplicateFrame(cursor, ctxMenu.idx); setCtxMenu(null) }}
+              >
+                Duplicate frame
+              </button>
+              <button
+                class="w-full text-left px-3 py-1.5 text-sm hover:bg-red-50 text-red-600 disabled:text-gray-300"
+                disabled={frames.length <= 1}
+                onClick={() => { deleteFrame(cursor, ctxMenu.idx); setCtxMenu(null) }}
+              >
+                Delete frame
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
