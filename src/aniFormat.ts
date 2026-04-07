@@ -93,7 +93,7 @@ function parseIconFrame(buf: ArrayBuffer, isCursor: boolean): CursorFrame | null
   const andMask = new Uint8Array(Math.ceil(realWidth / 8) * realHeight)
 
   for (let y = 0; y < realHeight; y++) {
-    const srcY = flipRows ? y : (realHeight - 1 - y)
+    const srcY = flipRows ? (realHeight - 1 - y) : y
     const xorRow = xorOffset + srcY * xorStride
     for (let x = 0; x < realWidth; x++) {
       const dstIdx = (y * realWidth + x) * 4
