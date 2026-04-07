@@ -16,10 +16,23 @@ const CHANGELOG = [
     'Frame management: add, duplicate, delete, reorder',
     'Color dropdown with palette from current frame',
     'localStorage persistence across refresh',
+    'Undo/redo for paint, hotspot, and frame operations',
+    'Copy/paste frames with Ctrl+C/V',
   ] },
 ]
 
+const HOTKEYS: { key: string; desc: string }[] = [
+  { key: 'Ctrl+Z', desc: 'Undo' },
+  { key: 'Ctrl+Y', desc: 'Redo' },
+  { key: 'Ctrl+C', desc: 'Copy frame' },
+  { key: 'Ctrl+V', desc: 'Paste frame' },
+  { key: 'Click', desc: 'Set pixel / select frame' },
+  { key: 'Drag', desc: 'Paint stroke / reorder frame' },
+  { key: 'Right-click', desc: 'Frame context menu (duplicate, delete)' },
+]
+
 const showChangelog = signal(false)
+const showShortcuts = signal(false)
 
 export function AppTitle() {
   return (
@@ -34,6 +47,13 @@ export function AppTitle() {
         v{APP_VERSION}
       </button>
       <span class="flex-1" />
+      <button
+        class="font-bold text-xs text-gray-400 hover:text-blue-500 w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center"
+        onClick={(e) => { e.stopPropagation(); showShortcuts.value = !showShortcuts.value }}
+        title="Keyboard shortcuts"
+      >
+        ?
+      </button>
     </span>
   )
 }
@@ -96,6 +116,30 @@ export function AppPane() {
               </ul>
             </div>
           ))}
+        </div>
+      )}
+      {showShortcuts.value && (
+        <div class="px-3 pb-3 border-t border-gray-200 mt-1 pt-2">
+          <table class="text-xs w-full">
+            {HOTKEYS.map((h, i) => (
+              <tr key={i}>
+                <td class="pr-3 py-0.5 whitespace-nowrap">
+                  {h.key.split(' / ').map((combo, ci) => (
+                    <span key={ci}>
+                      {ci > 0 && <span class="text-gray-400 mx-1">/</span>}
+                      {combo.split('+').map((k, j) => (
+                        <span key={j}>
+                          {j > 0 && <span class="text-gray-400 mx-0.5">+</span>}
+                          <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono text-[10px] shadow-sm">{k.trim()}</kbd>
+                        </span>
+                      ))}
+                    </span>
+                  ))}
+                </td>
+                <td class="py-0.5 text-gray-600">{h.desc}</td>
+              </tr>
+            ))}
+          </table>
         </div>
       )}
     </div>

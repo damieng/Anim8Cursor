@@ -204,6 +204,27 @@ export function execDeleteFrame(
   })
 }
 
+export function execPasteFrame(
+  getFrames: () => CursorFrame[],
+  setFrames: (frames: CursorFrame[]) => void,
+  _setSelected: (i: number) => void,
+  setDirty: (d: boolean) => void,
+  history: UndoHistory,
+  frameIdx: number,
+  pasted: CursorFrame,
+) {
+  const frames = getFrames()
+  const before = snapshotFrame(frames[frameIdx])
+  setFrames(restoreFrame(frames, frameIdx, snapshotFrame(pasted)))
+  setDirty(true)
+
+  history.push({
+    name: 'Paste Frame',
+    execute() { setFrames(restoreFrame(getFrames(), frameIdx, snapshotFrame(pasted))); setDirty(true) },
+    undo() { setFrames(restoreFrame(getFrames(), frameIdx, snapshotFrame(before))); setDirty(true) },
+  })
+}
+
 export function execMoveFrame(
   getFrames: () => CursorFrame[],
   setFrames: (frames: CursorFrame[]) => void,

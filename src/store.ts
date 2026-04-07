@@ -1,7 +1,7 @@
 import { signal, type Signal } from '@preact/signals'
 import { parseAni, writeAni, createEmptyFrame } from './aniFormat'
 import type { AniFile, CursorFrame } from './aniFormat'
-import { UndoHistory, beginPaintStroke, commitPaintStroke, execSetHotspot, execAddFrame, execDuplicateFrame, execDeleteFrame, execMoveFrame } from './undoHistory'
+import { UndoHistory, snapshotFrame, beginPaintStroke, commitPaintStroke, execSetHotspot, execAddFrame, execDuplicateFrame, execDeleteFrame, execMoveFrame, execPasteFrame } from './undoHistory'
 
 export { UndoHistory } from './undoHistory'
 
@@ -205,6 +205,31 @@ export function setFrameRate(cursor: CursorInstance, frameIdx: number, rate: num
 export function setSpeed(cursor: CursorInstance, speed: number) {
   cursor.speed.value = speed
   cursor.dirty.value = true
+}
+
+let clipboard: CursorFrame | null = null
+
+export function copyFrame(cursor: CursorInstance, idx: number) {
+  const frames = cursor.frames.value
+  if (idx < 0 || idx >= frames.length) return
+  clipboard = snapshotFrame(frames[idx])
+}
+
+export function pasteFrame(cursor: CursorInstance, idx: number) {
+  if (!clipboard) return
+  execPasteFrame(
+    () => cursor.frames.value,
+    (f) => { cursor.frames.value = f },
+    (i) => { cursor.selectedFrame.value = i },
+    (d) => { cursor.dirty.value = d },
+    cursor.undoHistory,
+    idx,
+    clipboard,
+  )
+}
+
+export function hasClipboard(): boolean {
+  return clipboard !== null
 }
 
 // --- Global state ---

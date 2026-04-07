@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
-import { type CursorInstance, setPixel, setHotspot, commitPaint, undo, redo } from '../store'
+import { type CursorInstance, setPixel, setHotspot, commitPaint, undo, redo, copyFrame, pasteFrame } from '../store'
 import { ChevronDown } from 'lucide-preact'
 
 function ColorDropdown({ color, onChange, framePixels }: {
@@ -244,10 +244,18 @@ export function FrameEditor({ cursor }: { cursor: CursorInstance }) {
         e.preventDefault()
         redo(cursor)
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault()
+        copyFrame(cursor, idx)
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault()
+        pasteFrame(cursor, idx)
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [cursor])
+  }, [cursor, idx])
 
   return (
     <div class="flex flex-col h-full">
