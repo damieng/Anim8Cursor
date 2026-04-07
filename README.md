@@ -1,4 +1,4 @@
-# ANI Cursor Editor
+# Anim8Cursor
 
 A web-based editor for Windows animated mouse cursor (.ani) files, built with Preact, TypeScript, and Tailwind CSS.
 

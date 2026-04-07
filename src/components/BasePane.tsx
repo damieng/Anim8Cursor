@@ -24,11 +24,13 @@ export function BasePane({
 }: Props) {
   const stored = windowId ? windowLayouts.value[windowId] : undefined
   const [pos, setPos] = useState({ x: stored?.x ?? initialX, y: stored?.y ?? initialY })
-  const [size, setSize] = useState({ w: stored?.w ?? (initialW ?? 0), h: stored?.h ?? (initialH ?? 0) })
+  const [size, setSize] = useState({ w: resizable ? (stored?.w ?? (initialW ?? 0)) : (initialW ?? 0), h: resizable ? (stored?.h ?? (initialH ?? 0)) : (initialH ?? 0) })
 
   useEffect(() => {
     if (windowId) {
-      updateWindowLayout(windowId, { x: pos.x, y: pos.y, w: size.w, h: size.h })
+      const layout: Record<string, unknown> = { x: pos.x, y: pos.y }
+      if (resizable) layout.w = size.w; layout.h = size.h
+      updateWindowLayout(windowId, layout as Partial<import('../store').WindowRect>)
     }
   }, [])
 
@@ -76,8 +78,10 @@ export function BasePane({
       dragging.current = false
       resizing.current = false
       if (wasActive && windowId) {
-        const p = posRef.current, s = sizeRef.current
-        updateWindowLayout(windowId, { x: p.x, y: p.y, w: s.w, h: s.h })
+        const p = posRef.current
+        const update: Partial<import('../store').WindowRect> = { x: p.x, y: p.y }
+        if (resizable) update.w = sizeRef.current.w; update.h = sizeRef.current.h
+        updateWindowLayout(windowId, update)
       }
     }
     document.addEventListener('mousemove', onMouseMove)

@@ -5,7 +5,7 @@ import { CursorPane, CursorPaneTitle, CursorStatusBar } from './panes/CursorPane
 import { FrameEditor, EditorTitle } from './panes/FrameEditor'
 import { PreviewPane, PreviewTitle } from './panes/PreviewPane'
 import { SaveBar, SpeedControl } from './components/Toolbar'
-import { cursors, activeCursorId, removeCursor, storedFocusedId, openPreview } from './store'
+import { cursors, activeCursorId, removeCursor, storedFocusedId, openPreview, loadAniFile, addCursor } from './store'
 import { Play } from 'lucide-preact'
 import './app.css'
 
@@ -31,14 +31,34 @@ export function App() {
     removeCursor(cursorId)
   }
 
+  function handleDrop(e: DragEvent) {
+    e.preventDefault()
+    const file = e.dataTransfer?.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const cursor = loadAniFile(reader.result as ArrayBuffer, file.name)
+        addCursor(cursor)
+      } catch (err) {
+        alert(`Error loading file: ${(err as Error).message}`)
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  }
+
   return (
-    <div class="relative w-screen h-screen overflow-hidden bg-gray-200">
+    <div
+      class="relative w-screen h-screen overflow-hidden bg-gray-200"
+      onDragOver={(e) => { e.preventDefault() }}
+      onDrop={handleDrop}
+    >
       <BasePane
         title={<AppTitle />}
         windowId="cursor-editor"
         initialX={16}
         initialY={16}
-        initialW={320}
+        initialW={420}
         zIndex={getZIndex('cursor-editor')}
         onFocus={() => setFocus('cursor-editor')}
       >
@@ -53,7 +73,7 @@ export function App() {
               windowId={`editor-${cursor.id}`}
               initialX={16 + i * 30}
               initialY={120 + i * 30}
-              initialW={420}
+        initialW={500}
               initialH={480}
               resizable
               zIndex={getZIndex(`editor-${cursor.id}`)}

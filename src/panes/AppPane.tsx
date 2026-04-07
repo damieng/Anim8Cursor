@@ -1,10 +1,44 @@
-import { useState } from 'preact/hooks'
-import { FolderOpen, FilePlus, MousePointer } from 'lucide-preact'
+import { signal } from '@preact/signals'
+import { FilePlus, FolderOpen } from 'lucide-preact'
 import { createCursor, addCursor, loadAniFile } from '../store'
+import { IconBtn } from '../components/IconBtn'
+
+const ICON = 18
+const APP_VERSION = __APP_VERSION__
+
+const CHANGELOG = [
+  { version: '0.1.0', changes: [
+    'Initial release',
+    'Load and save .ani files',
+    'Frame-by-frame RGBA pixel editor',
+    'Hotspot positioning',
+    'Animated preview with per-frame rates',
+    'Frame management: add, duplicate, delete, reorder',
+    'Color dropdown with palette from current frame',
+    'localStorage persistence across refresh',
+  ] },
+]
+
+const showChangelog = signal(false)
+
+export function AppTitle() {
+  return (
+    <span class="flex items-center w-full gap-1">
+      <span class="font-black tracking-tight">Anim8Cursor</span>
+      <span class="flex-1" />
+      <button
+        class="font-normal text-xs text-gray-400 hover:text-blue-500"
+        onClick={(e) => { e.stopPropagation(); showChangelog.value = !showChangelog.value }}
+        title="Show changelog"
+      >
+        v{APP_VERSION}
+      </button>
+      <span class="flex-1" />
+    </span>
+  )
+}
 
 export function AppPane() {
-  const [dragOver, setDragOver] = useState(false)
-
   function openFile() {
     const input = document.createElement('input')
     input.type = 'file'
@@ -24,73 +58,46 @@ export function AppPane() {
   }
 
   function newCursor() {
-    const size = prompt('Cursor size (e.g. 32):', '32')
-    const s = parseInt(size ?? '32')
-    if (isNaN(s) || s < 1 || s > 256) return
-    addCursor(createCursor(undefined, undefined, undefined))
-  }
-
-  function handleDrop(e: DragEvent) {
-    e.preventDefault()
-    setDragOver(false)
-    const file = e.dataTransfer?.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        const cursor = loadAniFile(reader.result as ArrayBuffer, file.name)
-        addCursor(cursor)
-      } catch (err) {
-        alert(`Error loading file: ${(err as Error).message}`)
-      }
-    }
-    reader.readAsArrayBuffer(file)
+    addCursor(createCursor())
   }
 
   return (
-    <div class="p-4 flex flex-col gap-4">
-      <div class="flex items-center gap-2">
-        <MousePointer size={24} class="text-blue-600" />
-        <h1 class="text-lg font-bold text-gray-800">ANI Cursor Editor</h1>
-        <span class="text-xs text-gray-400 ml-auto">v{__APP_VERSION__}</span>
+    <div>
+      <div class="flex items-center gap-3 px-3 py-2">
+        <IconBtn onClick={newCursor} title="New cursor">
+          <FilePlus size={ICON} />
+        </IconBtn>
+        <IconBtn onClick={openFile} title="Open .ani file">
+          <FolderOpen size={ICON} />
+        </IconBtn>
+        <span class="w-px h-6 bg-gray-300 mx-0.5" />
+        <div class="flex flex-col">
+          <span class="text-sm text-gray-600">Windows Animated Cursor Editor</span>
+          <a
+            class="text-sm text-blue-500 hover:text-blue-700 underline"
+            href="https://github.com/damieng/Anim8Cursor"
+            target="_blank"
+          >
+            https://github.com/damieng/Anim8Cursor
+          </a>
+        </div>
       </div>
-
-      <div class="flex flex-col gap-2">
-        <button
-          class="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
-          onClick={openFile}
-        >
-          <FolderOpen size={16} />
-          Open .ani / .cur / .ico
-        </button>
-        <button
-          class="flex items-center gap-2 px-3 py-2 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium"
-          onClick={newCursor}
-        >
-          <FilePlus size={16} />
-          New Cursor
-        </button>
-      </div>
-
-      <div
-        class={`border-2 border-dashed rounded-lg p-6 text-center text-sm transition-colors ${
-          dragOver ? 'border-blue-400 bg-blue-50 text-blue-600' : 'border-gray-300 text-gray-400'
-        }`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-      >
-        Drop .ani file here
-      </div>
-
-      <div class="text-xs text-gray-400 space-y-1">
-        <p>Supports Windows animated cursor format (.ani)</p>
-        <p>Each frame is an RGBA image with a hotspot</p>
-      </div>
+      {showChangelog.value && (
+        <div class="px-3 pb-3 border-t border-gray-200 mt-1 pt-2 max-h-48 overflow-y-auto">
+          {CHANGELOG.map((release) => (
+            <div key={release.version} class="mb-2 last:mb-0">
+              <div class="text-xs font-bold text-gray-600">
+                v{release.version}
+              </div>
+              <ul class="text-xs text-gray-500 ml-3 list-disc">
+                {release.changes.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
-}
-
-export function AppTitle() {
-  return <span class="flex items-center gap-1"><MousePointer size={14} /> ANI Cursor Editor</span>
 }
