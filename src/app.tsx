@@ -6,6 +6,7 @@ import { FrameEditor, EditorTitle } from './panes/FrameEditor'
 import { PreviewPane, PreviewTitle } from './panes/PreviewPane'
 import { SaveBar, SpeedControl } from './components/Toolbar'
 import { ZoomControl } from './components/ZoomControl'
+import { SizeButton } from './dialogs/ResizeDialog'
 import { cursors, activeCursorId, removeCursor, storedFocusedId, openPreview, loadAniFile, addCursor } from './store'
 import { Play } from 'lucide-preact'
 import './app.css'
@@ -103,6 +104,7 @@ export function App() {
             <div class="p-3 h-full flex flex-col overflow-hidden">
               <div class="flex items-center gap-2 mb-2 shrink-0">
                 <SaveBar cursor={cursor} />
+                <SizeButton cursor={cursor} />
                 <SpeedControl cursor={cursor} />
                 <button
                   class="px-2 py-1 bg-white hover:bg-blue-50 rounded border border-gray-300 font-medium flex items-center gap-1"

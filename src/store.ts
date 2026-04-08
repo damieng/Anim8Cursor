@@ -232,6 +232,71 @@ export function hasClipboard(): boolean {
   return clipboard !== null
 }
 
+export type ScaleMode = 'nearest' | 'bilinear'
+
+export function scaleFrame(frame: CursorFrame, newW: number, newH: number, mode: ScaleMode): CursorFrame {
+  const { width, height, pixels } = frame
+  const out = createEmptyFrame(newW, newH)
+  out.hotspotX = Math.round(frame.hotspotX * newW / width)
+  out.hotspotY = Math.round(frame.hotspotY * newH / height)
+
+  for (let y = 0; y < newH; y++) {
+    for (let x = 0; x < newW; x++) {
+      const dstOff = (y * newW + x) * 4
+
+      if (mode === 'nearest') {
+        const sx = Math.min(Math.floor(x * width / newW), width - 1)
+        const sy = Math.min(Math.floor(y * height / newH), height - 1)
+        const srcOff = (sy * width + sx) * 4
+        out.pixels[dstOff] = pixels[srcOff]
+        out.pixels[dstOff + 1] = pixels[srcOff + 1]
+        out.pixels[dstOff + 2] = pixels[srcOff + 2]
+        out.pixels[dstOff + 3] = pixels[srcOff + 3]
+      } else {
+        const fx = x * width / newW - 0.5
+        const fy = y * height / newH - 0.5
+        const x0 = Math.max(0, Math.floor(fx))
+        const y0 = Math.max(0, Math.floor(fy))
+        const x1 = Math.min(width - 1, x0 + 1)
+        const y1 = Math.min(height - 1, y0 + 1)
+        const dx = fx - x0
+        const dy = fy - y0
+        const w00 = (1 - dx) * (1 - dy)
+        const w10 = dx * (1 - dy)
+        const w01 = (1 - dx) * dy
+        const w11 = dx * dy
+        const i00 = (y0 * width + x0) * 4
+        const i10 = (y0 * width + x1) * 4
+        const i01 = (y1 * width + x0) * 4
+        const i11 = (y1 * width + x1) * 4
+        for (let c = 0; c < 4; c++) {
+          out.pixels[dstOff + c] = Math.round(
+            pixels[i00 + c] * w00 +
+            pixels[i10 + c] * w10 +
+            pixels[i01 + c] * w01 +
+            pixels[i11 + c] * w11
+          )
+        }
+      }
+    }
+  }
+
+  return out
+}
+
+export function resizeCursor(cursor: CursorInstance, newW: number, newH: number, mode: ScaleMode) {
+  const frames = cursor.frames.value.map((f: CursorFrame) => scaleFrame(f, newW, newH, mode))
+  const before = cursor.frames.value
+  cursor.frames.value = frames
+  cursor.dirty.value = true
+
+  cursor.undoHistory.push({
+    name: 'Resize',
+    execute() { cursor.frames.value = frames; cursor.dirty.value = true },
+    undo() { cursor.frames.value = before; cursor.dirty.value = true },
+  })
+}
+
 // --- Global state ---
 
 import {

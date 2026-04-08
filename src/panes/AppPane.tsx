@@ -7,6 +7,16 @@ const ICON = 18
 const APP_VERSION = __APP_VERSION__
 
 const CHANGELOG = [
+  { version: '0.2.0', changes: [
+    'Resize frames with nearest-neighbor or bilinear scaling',
+    'Undo/redo for all operations (paint, hotspot, frames)',
+    'Ctrl+C/V to copy/paste frames',
+    'Drag to reorder frames',
+    'Right-click context menu on frames',
+    'Add-frame placeholder tile',
+    'Keyboard shortcuts help panel (?)',
+    'Vitest test suite',
+  ] },
   { version: '0.1.0', changes: [
     'Initial release',
     'Load and save .ani files',
@@ -16,8 +26,6 @@ const CHANGELOG = [
     'Frame management: add, duplicate, delete, reorder',
     'Color dropdown with palette from current frame',
     'localStorage persistence across refresh',
-    'Undo/redo for paint, hotspot, and frame operations',
-    'Copy/paste frames with Ctrl+C/V',
   ] },
 ]
 
